@@ -1,0 +1,167 @@
+import os
+
+# تحديد هيكل المجلدات والملفات للمشروع الجديد
+project_structure = {
+    "app": [
+        "__init__.py",
+        "main.py",
+        "config.py",
+        "models.py",
+        "database.py",
+        "routes.py"
+    ],
+    "data": [
+        "raw/",
+        "processed/"
+    ],
+    "notebooks": [
+        "exploratory_analysis.ipynb"
+    ],
+    "tests": [
+        "__init__.py",
+        "test_main.py"
+    ],
+    "": [
+        "requirements.txt",
+        "Dockerfile",
+        "docker-compose.yml",
+        "Makefile",
+        ".env.example",
+        ".gitignore",
+        "README.md"
+    ]
+}
+
+# محتويات الملفات الأساسية الافتراضية
+file_contents = {
+    "requirements.txt": """fastapi>=0.100.0
+uvicorn>=0.22.0
+pandas>=2.0.0
+numpy>=1.24.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+python-dotenv>=1.0.0
+openpyxl>=3.1.0
+""",
+    "Dockerfile": """FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+""",
+    "docker-compose.yml": """version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/project_db
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: project_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+""",
+    "Makefile": """install:
+\tpip install -r requirements.txt
+
+run:
+\tuvicorn app.main:app --reload
+
+docker-build:
+\tdocker-compose build
+
+docker-up:
+\tdocker-compose up -d
+
+docker-down:
+\tdocker-compose down
+""",
+    ".env.example": """APP_ENV=development
+PORT=8000
+DATABASE_URL=sqlite:///./app.db
+SECRET_KEY=your_super_secret_key_here
+""",
+    ".gitignore": """__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+data/raw/*
+data/processed/*
+.ipynb_checkpoints/
+.DS_Store
+""",
+    "README.md": """# New Project
+
+Project build initialized successfully.
+
+## Quick Start
+1. Install dependencies: `make install` or `pip install -r requirements.txt`
+2. Run application: `make run` or `uvicorn app.main:app --reload`
+""",
+    "app/main.py": """from fastapi import FastAPI
+
+app = FastAPI(title="New Project API", version="1.0.0")
+
+@app.get("/")
+def read_root():
+    return {"status": "success", "message": "Project is up and running!"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy"}
+"""
+}
+
+def create_project():
+    print("🚀 بدء بناء هيكل المشروع الجديد...")
+    
+    for folder, files in project_structure.items():
+        # إنشاء المجلدات الرئيسية
+        if folder:
+            os.makedirs(folder, exist_ok=True)
+            print(f"📁 تم إنشاء المجلد: {folder}/")
+            
+        for file in files:
+            # التعامل مع المجلدات الفرعية داخل القائمة (مثل data/raw/)
+            if file.endswith("/"):
+                sub_folder = os.path.join(folder, file) if folder else file
+                os.makedirs(sub_folder, exist_ok=True)
+                continue
+                
+            file_path = os.path.join(folder, file) if folder else file
+            
+            # كتابة محتوى افتراضي إذا وُجد، أو ملف فارغ
+            content = file_contents.get(file_path, file_contents.get(file, ""))
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            print(f"   📄 تم إنشاء الملف: {file_path}")
+
+    print("\n✨ تم بناء المشروع بنجاح وجاهز للعمل!")
+
+if __name__ == "__main__":
+    create_project()
